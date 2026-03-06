@@ -1,6 +1,6 @@
 {
-  "name": "Tabata Timer",
-  "short_name": "Tabata",
+  "name": "Home Tabata Timer",
+  "short_name": "Home Tabata",
   "description": "Interval timer for home workouts with preset and custom routines",
   "start_url": "/",
   "display": "standalone",

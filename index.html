@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#1a1a2e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Tabata Timer</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⏱</text></svg>" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ===== HOME VIEW ===== -->
+  <div id="view-home" class="view active">
+    <div class="header">
+      <h1>Tabata Timer</h1>
+    </div>
+
+    <div class="section-title">Presets</div>
+    <div id="preset-list" class="workout-list"></div>
+
+    <div id="custom-section">
+      <div class="section-title">My Workouts</div>
+      <div id="custom-list" class="workout-list"></div>
+    </div>
+
+    <div style="margin-top: 20px;">
+      <button class="btn btn-primary" onclick="app.openEditor()">+ Create Workout</button>
+    </div>
+  </div>
+
+  <!-- ===== SETUP VIEW ===== -->
+  <div id="view-setup" class="view">
+    <div class="header">
+      <button class="back-btn" onclick="app.goHome()">&larr;</button>
+      <h1 id="setup-title">Workout</h1>
+      <div style="width:40px"></div>
+    </div>
+
+    <div class="setup-grid">
+      <div class="form-group">
+        <label>Work (sec)</label>
+        <input type="number" id="setup-work" min="5" max="120" />
+      </div>
+      <div class="form-group">
+        <label>Rest (sec)</label>
+        <input type="number" id="setup-rest" min="5" max="120" />
+      </div>
+      <div class="form-group">
+        <label>Rounds</label>
+        <input type="number" id="setup-rounds" min="1" max="50" />
+      </div>
+    </div>
+
+    <div class="section-title">Exercises</div>
+    <div id="setup-exercises"></div>
+
+    <div class="setup-actions">
+      <button id="setup-start-btn" class="btn btn-primary">Start Workout</button>
+    </div>
+  </div>
+
+  <!-- ===== EDITOR VIEW ===== -->
+  <div id="view-editor" class="view">
+    <div class="header">
+      <button class="back-btn" onclick="app.goHome()">&larr;</button>
+      <h1 id="editor-title">Create Workout</h1>
+      <div style="width:40px"></div>
+    </div>
+
+    <div class="setup-grid">
+      <div class="form-group full">
+        <label>Workout Name</label>
+        <input type="text" id="edit-name" placeholder="My Workout" />
+      </div>
+      <div class="form-group full">
+        <label>Description</label>
+        <input type="text" id="edit-desc" placeholder="Optional description" />
+      </div>
+      <div class="form-group">
+        <label>Work (sec)</label>
+        <input type="number" id="edit-work" min="5" max="120" value="20" />
+      </div>
+      <div class="form-group">
+        <label>Rest (sec)</label>
+        <input type="number" id="edit-rest" min="5" max="120" value="10" />
+      </div>
+      <div class="form-group">
+        <label>Rounds</label>
+        <input type="number" id="edit-rounds" min="1" max="50" value="8" />
+      </div>
+    </div>
+
+    <div class="section-title">Exercises</div>
+    <div id="edit-exercises" class="exercise-list-edit"></div>
+
+    <div class="setup-actions">
+      <button class="btn btn-primary" onclick="app.saveWorkout()">Save Workout</button>
+    </div>
+  </div>
+
+  <!-- ===== TIMER VIEW ===== -->
+  <div id="view-timer" class="view timer-view">
+    <div class="timer-top">
+      <button class="timer-stop" onclick="app.stopTimer()">&#10005;</button>
+      <div></div>
+    </div>
+
+    <div class="timer-phase" id="timer-phase-label">Get Ready</div>
+    <div class="timer-display" id="timer-time">3</div>
+    <div class="timer-exercise" id="timer-exercise-name"></div>
+    <div class="timer-round" id="timer-round-label"></div>
+    <div class="timer-progress" id="timer-progress"></div>
+
+    <div class="timer-bottom">
+      <button id="timer-pause-btn" class="timer-btn pause">Pause</button>
+    </div>
+  </div>
+
+  <!-- PWA Install Prompt -->
+  <div id="install-prompt" class="install-prompt" style="display:none">
+    <div class="install-prompt-content">
+      <div class="install-prompt-icon">⏱</div>
+      <div class="install-prompt-text">
+        <strong>Install Tabata Timer</strong>
+        <p>Add to your home screen for quick access and offline use</p>
+      </div>
+      <div class="install-prompt-actions">
+        <button id="install-btn" class="btn btn-primary btn-small">Install</button>
+        <button id="install-dismiss" class="btn btn-secondary btn-small">Not now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Service Worker Registration + Install Prompt -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+
+    // PWA Install Prompt
+    let deferredPrompt = null;
+    const installBanner = document.getElementById('install-prompt');
+    const installBtn = document.getElementById('install-btn');
+    const dismissBtn = document.getElementById('install-dismiss');
+    const DISMISS_KEY = 'tabata_install_dismissed';
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      // Show if not previously dismissed
+      if (!localStorage.getItem(DISMISS_KEY)) {
+        installBanner.style.display = 'flex';
+      }
+    });
+
+    installBtn.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const result = await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      installBanner.style.display = 'none';
+      if (result.outcome === 'accepted') {
+        localStorage.setItem(DISMISS_KEY, '1');
+      }
+    });
+
+    dismissBtn.addEventListener('click', () => {
+      installBanner.style.display = 'none';
+      localStorage.setItem(DISMISS_KEY, '1');
+    });
+
+    // Hide if already installed as standalone
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      installBanner.style.display = 'none';
+    }
+  </script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
